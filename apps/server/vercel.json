@@ -2,6 +2,7 @@
   "version": 2,
   "framework": null,
   "buildCommand": "echo skip - api/ runs on @vercel/node",
+  "outputDirectory": "public",
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/index" }
   ]

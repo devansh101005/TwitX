@@ -1,0 +1,2 @@
+# Empty directory marker so git tracks public/ and Vercel can resolve it.
+# This Vercel project is API-only — no static assets ship here.
