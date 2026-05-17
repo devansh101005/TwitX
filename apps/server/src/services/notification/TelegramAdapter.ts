@@ -3,27 +3,38 @@ import { prisma } from '../../db/prisma';
 import type { DraftPost } from '../ai/groq';
 
 let bot: TelegramBot | null = null;
-let handlersRegistered = false;
 
+/**
+ * Returns the singleton bot instance. Always created with polling: false —
+ * updates arrive via the /telegram/webhook route which calls bot.processUpdate().
+ * Handlers are registered eagerly so they fire for both webhook and polling modes.
+ */
 export function getTelegramBot(): TelegramBot {
   if (bot) return bot;
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) throw new Error('TELEGRAM_BOT_TOKEN is not set');
 
-  // Polling is disabled by default — sends work without it.
-  // Set TELEGRAM_POLLING=true on the long-running process that should handle buttons.
-  const polling = process.env.TELEGRAM_POLLING === 'true';
-
-  bot = new TelegramBot(token, { polling });
-
-  if (polling && !handlersRegistered) {
-    registerHandlers(bot);
-    handlersRegistered = true;
-    console.log('[telegram] polling enabled, handlers registered');
-  }
+  bot = new TelegramBot(token, { polling: false });
+  registerHandlers(bot);
 
   return bot;
+}
+
+/**
+ * One-shot helper to point Telegram at our webhook URL.
+ * Called from scripts/setupTelegramWebhook.ts after deploy (and after PUBLIC_URL changes).
+ */
+export async function setupTelegramWebhook(
+  publicUrl: string,
+  secretToken?: string,
+): Promise<void> {
+  const tg = getTelegramBot();
+  const url = `${publicUrl.replace(/\/$/, '')}/telegram/webhook`;
+  await tg.setWebHook(url, {
+    secret_token: secretToken,
+    allowed_updates: ['message', 'callback_query'],
+  });
 }
 
 export class TelegramAdapter {
@@ -45,7 +56,7 @@ export class TelegramAdapter {
       });
 
       const label = draft.type === 'thread' ? '🧵 Thread' : '💬 Tweet';
-      const preview = draft.content.slice(0, 3500); // Telegram message limit is 4096
+      const preview = draft.content.slice(0, 3500);
       const message = `${label}\n\n${preview}${draft.content.length > 3500 ? '\n\n...(truncated)' : ''}`;
 
       await tg.sendMessage(chatId, message, {

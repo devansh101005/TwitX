@@ -1,3 +1,11 @@
+/**
+ * End-to-end smoke test (skips the webhook).
+ *
+ * Runs: fetch → filter → AI → sendDrafts via bot.sendMessage (no polling needed).
+ * Requires: the test user already has a telegramChatId bound — either bind it
+ * via the dashboard onboarding flow, or via ngrok + webhook + tapping /start
+ * in Telegram before running this.
+ */
 import 'dotenv/config';
 import { prisma } from '../db/prisma';
 import { fetchRedditPosts } from '../services/fetcher/reddit';
@@ -6,7 +14,6 @@ import { fetchGitHubTrending } from '../services/fetcher/github';
 import { scoreAndFilter } from '../lib/relevanceScore';
 import { generateDrafts } from '../services/ai/groq';
 import { NotificationService } from '../services/notification/NotificationService';
-import { getTelegramBot } from '../services/notification/TelegramAdapter';
 
 const USER_ID = process.argv[2] ?? 'test-user-mvp';
 
@@ -31,45 +38,28 @@ async function ensureTestUser(): Promise<void> {
   });
 }
 
-async function waitForTelegramConnect(timeoutMs = 5 * 60_000): Promise<string> {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < timeoutMs) {
-    const user = await prisma.user.findUnique({ where: { id: USER_ID } });
-    if (user?.telegramChatId) return user.telegramChatId;
-    await new Promise((r) => setTimeout(r, 2000));
-  }
-  throw new Error('Timed out waiting for Telegram /start');
-}
-
 async function main() {
   if (!process.env.TELEGRAM_BOT_TOKEN) {
-    console.error('TELEGRAM_BOT_TOKEN is not set in apps/server/.env');
+    console.error('TELEGRAM_BOT_TOKEN is not set');
     process.exit(1);
   }
   if (!process.env.GROQ_API_KEY) {
-    console.error('GROQ_API_KEY is not set in apps/server/.env');
+    console.error('GROQ_API_KEY is not set');
     process.exit(1);
   }
-
-  // Force polling for this script so /start and button callbacks work.
-  process.env.TELEGRAM_POLLING = 'true';
-
-  const bot = getTelegramBot();
-  const me = await bot.getMe();
-  console.log(`[telegram] bot @${me.username} ready\n`);
 
   await ensureTestUser();
 
   const user = await prisma.user.findUnique({ where: { id: USER_ID } });
   if (!user?.telegramChatId) {
-    console.log(`Open this link in Telegram to connect your chat:`);
-    console.log(`   https://t.me/${me.username}?start=${USER_ID}\n`);
-    console.log('Waiting for /start...');
-    await waitForTelegramConnect();
-    console.log('[telegram] chat bound ✓\n');
-  } else {
-    console.log(`[telegram] already bound to chat ${user.telegramChatId}\n`);
+    console.error(
+      `User ${USER_ID} has no telegramChatId.\nBind it first by tapping /start ${USER_ID} in Telegram` +
+        ' after running the dashboard onboarding flow.',
+    );
+    process.exit(1);
   }
+
+  console.log(`[telegram] sending to chat ${user.telegramChatId}\n`);
 
   console.log('Fetching content...');
   const [reddit, hn, github] = await Promise.all([
@@ -99,11 +89,13 @@ async function main() {
   await notify.send(USER_ID, drafts);
   console.log('  → sent ✓\n');
 
-  console.log('Drafts delivered. Tap Approve / Skip / Edit in Telegram to test feedback.');
-  console.log('Process will stay alive for button interactions. Ctrl+C to exit.');
+  console.log('Buttons (Approve/Skip/Edit) will only respond if the webhook is reachable');
+  console.log('(local: ngrok + npm run webhook:setup, prod: Vercel + webhook:setup).');
+  await prisma.$disconnect();
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error(err);
+  await prisma.$disconnect();
   process.exit(1);
 });
