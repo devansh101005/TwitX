@@ -8,6 +8,65 @@ import postsRouter from './routes/posts';
 import feedbackRouter from './routes/feedback';
 import { runOnce } from './services/scheduler/cron';
 import { getTelegramBot } from './services/notification/TelegramAdapter';
+import type TelegramBot from 'node-telegram-bot-api';
+
+/**
+ * Manually dispatch a Telegram update so we can `await` every handler before
+ * responding. bot.processUpdate() fires handlers but doesn't wait — on
+ * serverless that means the function dies before sendMessage() finishes.
+ */
+async function dispatchUpdate(bot: TelegramBot, update: TelegramBot.Update): Promise<void> {
+  const pending: Promise<unknown>[] = [];
+  const collect = (r: unknown) => {
+    if (r && typeof (r as Promise<unknown>).then === 'function') {
+      pending.push(
+        (r as Promise<unknown>).catch((e: unknown) =>
+          console.error('[telegram handler]', e),
+        ),
+      );
+    }
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const b = bot as any;
+
+  if (update.message) {
+    const msg = update.message;
+
+    // onReplyToMessage handlers (for the Edit flow)
+    if (msg.reply_to_message) {
+      for (const l of b._replyListeners ?? []) {
+        if (
+          l.chatId === msg.chat.id &&
+          l.messageId === msg.reply_to_message.message_id
+        ) {
+          collect(l.callback(msg));
+        }
+      }
+    }
+
+    // onText handlers (for /start, /stop)
+    if (msg.text) {
+      for (const { regexp, callback } of b._textRegexpCallbacks ?? []) {
+        const match = msg.text.match(regexp);
+        if (match) collect(callback(msg, match));
+      }
+    }
+
+    // generic message listeners
+    for (const listener of bot.listeners('message')) {
+      collect((listener as (m: typeof msg) => unknown)(msg));
+    }
+  }
+
+  if (update.callback_query) {
+    for (const listener of bot.listeners('callback_query')) {
+      collect((listener as (q: typeof update.callback_query) => unknown)(update.callback_query));
+    }
+  }
+
+  await Promise.all(pending);
+}
 
 export function buildApp() {
   const app = express();
@@ -46,7 +105,9 @@ export function buildApp() {
     }
     try {
       const bot = getTelegramBot();
-      bot.processUpdate(req.body);
+      // Explicit dispatch + await so async handlers complete before serverless
+      // terminates the function. Don't replace with bot.processUpdate(req.body).
+      await dispatchUpdate(bot, req.body);
       res.sendStatus(200);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
