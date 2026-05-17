@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String          @id @default(cuid())
+  name           String?
+  email          String          @unique
+  createdAt      DateTime        @default(now())
+  telegramChatId String?
+  discordUserId  String?
+  discordGuildId String?
+  preferences    UserPreference?
+  generatedPosts GeneratedPost[]
+  feedback       Feedback[]
+}
+
+model UserPreference {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id])
+  niches          String[] // ["AI", "WebDev", "DSA", "Startups", "Cybersecurity"]
+  tone            String // "educational" | "witty" | "motivational" | "meme" | "opinionated"
+  postingStyle    String // "short" | "thread" | "mixed"
+  postsPerDay     Int      @default(3)
+  scheduleHours   Int[]    @default([9, 19])
+  deliveryChannel String // "telegram" | "discord" | "both"
+  twitterTier     String   @default("free") // "free" | "premium"
+  updatedAt       DateTime @updatedAt
+}
+
+model SourceContent {
+  id        String   @id @default(cuid())
+  source    String // "reddit" | "hackernews" | "github"
+  title     String
+  content   String   @db.Text
+  url       String
+  score     Int      @default(0)
+  tags      String[]
+  fetchedAt DateTime @default(now())
+}
+
+model GeneratedPost {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  content     String    @db.Text
+  type        String // "tweet" | "thread"
+  status      String    @default("pending") // "pending" | "approved" | "skipped" | "edited"
+  sourceIds   String[]
+  generatedAt DateTime  @default(now())
+  feedback    Feedback?
+}
+
+model Feedback {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  postId        String        @unique
+  post          GeneratedPost @relation(fields: [postId], references: [id])
+  feedbackType  String // "liked" | "skipped" | "edited"
+  editedVersion String?       @db.Text
+  createdAt     DateTime      @default(now())
+}

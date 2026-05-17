@@ -1,0 +1,174 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* Surfaces */
+  --color-paper: #F7F5F0;
+  --color-paper-2: #F1EEE6;
+  --color-paper-sunk: #ECE9E0;
+
+  /* Ink scale */
+  --color-ink: #0F0F0E;
+  --color-ink-2: #3A3A38;
+  --color-ink-3: #6B6B65;
+  --color-ink-4: #A8A8A0;
+
+  /* Lines */
+  --color-line: rgba(15, 15, 14, 0.10);
+  --color-line-strong: rgba(15, 15, 14, 0.22);
+
+  /* Signal */
+  --color-signal: #6FA82C;
+  --color-signal-bg: rgba(111, 168, 44, 0.10);
+
+  /* Status palette (dots only) */
+  --color-status-pending: #A8A8A0;
+  --color-status-approved: #3D9E47;
+  --color-status-skipped: #C8C5BB;
+  --color-status-edited: #C57F1F;
+
+  /* Fonts */
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html, body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11", "tnum";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Grain overlay — gives the paper a subtle texture */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.10;
+  mix-blend-mode: multiply;
+}
+
+/* Ensure interactive content sits above the grain */
+body > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Tabular numerals everywhere */
+[data-num], .font-mono, time, code {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom selection */
+::selection {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+
+/* Slow ease for transitions */
+* {
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Reveal keyframes */
+@keyframes paper-fade {
+  from { opacity: 0; transform: translateY(6px); filter: blur(2px); }
+  to   { opacity: 1; transform: translateY(0);   filter: blur(0); }
+}
+@keyframes paper-fade-soft {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes crosshair-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes signal-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(0.85); }
+}
+
+.reveal {
+  opacity: 0;
+  animation: paper-fade 700ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+.reveal-soft {
+  opacity: 0;
+  animation: paper-fade-soft 500ms ease forwards;
+}
+
+/* Crosshair corner markers */
+.crosshair {
+  position: relative;
+}
+.crosshair::before,
+.crosshair::after {
+  content: '+';
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-ink-4);
+  line-height: 1;
+  pointer-events: none;
+}
+.crosshair::before { top: -6px; left: -6px; }
+.crosshair::after  { bottom: -6px; right: -6px; }
+
+.crosshair-4::before,
+.crosshair-4::after,
+.crosshair-4 > .ch-tr,
+.crosshair-4 > .ch-bl {
+  content: '+';
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-ink-4);
+  line-height: 1;
+  pointer-events: none;
+}
+.crosshair-4 { position: relative; }
+.crosshair-4::before { top: -6px; left: -6px; content: '+'; }
+.crosshair-4::after  { bottom: -6px; right: -6px; content: '+'; }
+.crosshair-4 > .ch-tr { top: -6px; right: -6px; }
+.crosshair-4 > .ch-bl { bottom: -6px; left: -6px; }
+
+/* Eyebrow label utility */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-ink-3);
+  font-weight: 500;
+}
+
+/* Range input minimal styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 2px;
+  background: var(--color-line-strong);
+  border-radius: 9999px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: var(--color-ink);
+  cursor: pointer;
+  border: 2px solid var(--color-paper);
+  box-shadow: 0 0 0 1px var(--color-ink);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: var(--color-ink);
+  cursor: pointer;
+  border: 2px solid var(--color-paper);
+}

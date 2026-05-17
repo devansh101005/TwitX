@@ -1,0 +1,77 @@
+# ---------- Dependencies ----------
+node_modules/
+.pnp
+.pnp.*
+.yarn/cache
+.yarn/install-state.gz
+.yarn/build-state.yml
+.yarn/unplugged
+
+# ---------- Build outputs ----------
+dist/
+build/
+out/
+.next/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# ---------- Env / secrets ----------
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+!.env.example
+!.env.local.example
+
+# ---------- AI agent / Claude artifacts (not for deployment) ----------
+CLAUDE.md
+AGENTS.md
+.claude/
+.cursor/
+.aider*
+
+# ---------- Logs ----------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+lerna-debug.log*
+
+# ---------- Editor / IDE ----------
+.vscode/
+!.vscode/settings.json.example
+.idea/
+*.code-workspace
+*.swp
+*.swo
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# ---------- Test / coverage ----------
+/coverage
+*.lcov
+.nyc_output
+
+# ---------- Vercel / Railway ----------
+.vercel
+.railway
+
+# ---------- Prisma local artifacts ----------
+prisma/*.db
+prisma/*.db-journal
+
+# ---------- Misc ----------
+*.pem
+.cache/
+.temp/
+.tmp/
+tmp/
+
+Instruction.md
