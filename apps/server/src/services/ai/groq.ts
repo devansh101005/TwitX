@@ -36,16 +36,6 @@ function getModel(): string {
   return process.env.AI_MODEL ?? 'llama-3.3-70b-versatile';
 }
 
-function extractJsonArray(raw: string): string | null {
-  // Strip markdown fences if present.
-  const stripped = raw.replace(/```json|```/g, '').trim();
-  // Grab the first [...] block — Groq sometimes adds prose despite instructions.
-  const start = stripped.indexOf('[');
-  const end = stripped.lastIndexOf(']');
-  if (start === -1 || end === -1 || end <= start) return null;
-  return stripped.slice(start, end + 1);
-}
-
 function isDraftPost(value: unknown): value is DraftPost {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
@@ -54,6 +44,42 @@ function isDraftPost(value: unknown): value is DraftPost {
     typeof v.content === 'string' &&
     typeof v.inspiredBy === 'string'
   );
+}
+
+/**
+ * Parse draft objects out of the model response. Tolerant by design:
+ * 1. Happy path — a complete `[ ... ]` JSON array.
+ * 2. Salvage path — if the array is truncated (hit max_tokens) or malformed,
+ *    parse each complete flat `{ ... }` object individually and keep the valid
+ *    ones, so a cut-off final draft doesn't cost us the whole batch.
+ */
+function parseDrafts(raw: string): DraftPost[] {
+  const stripped = raw.replace(/```json|```/g, '').trim();
+
+  const start = stripped.indexOf('[');
+  const end = stripped.lastIndexOf(']');
+  if (start !== -1 && end > start) {
+    try {
+      const parsed = JSON.parse(stripped.slice(start, end + 1));
+      if (Array.isArray(parsed)) {
+        const drafts = parsed.filter(isDraftPost);
+        if (drafts.length > 0) return drafts;
+      }
+    } catch {
+      // fall through to salvage
+    }
+  }
+
+  const drafts: DraftPost[] = [];
+  for (const obj of stripped.match(/\{[^{}]*\}/g) ?? []) {
+    try {
+      const parsed: unknown = JSON.parse(obj);
+      if (isDraftPost(parsed)) drafts.push(parsed);
+    } catch {
+      // skip incomplete / invalid object
+    }
+  }
+  return drafts;
 }
 
 export async function generateDrafts(
@@ -67,24 +93,14 @@ export async function generateDrafts(
     model: getModel(),
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.8,
-    max_tokens: 2000,
+    max_tokens: 4000,
   });
 
   const raw = completion.choices[0]?.message?.content ?? '';
-  const jsonText = extractJsonArray(raw);
+  const drafts = parseDrafts(raw);
 
-  if (!jsonText) {
-    console.error('[groq] no JSON array found in response:', raw.slice(0, 300));
-    return [];
+  if (drafts.length === 0) {
+    console.error('[ai] no drafts parsed from response:', raw.slice(0, 300));
   }
-
-  try {
-    const parsed = JSON.parse(jsonText);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isDraftPost);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error(`[groq] JSON parse failed (${msg}). Raw:\n${raw.slice(0, 500)}`);
-    return [];
-  }
+  return drafts;
 }
