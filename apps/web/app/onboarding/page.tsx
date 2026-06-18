@@ -48,6 +48,13 @@ const TONES: { id: string; label: string; hint: string; sample: string }[] = [
     sample:
       "Unpopular: ORMs are productivity theater.\nYou save 4 hours of setup \nand pay it back 40 hours at a time \nwhen the query planner does something cute.",
   },
+  {
+    id: 'tpot',
+    label: 'tpot',
+    hint: 'lowercase, understated, like texting a smart friend. no hooks, no bait.',
+    sample:
+      'every "multi-agent framework" is just\na for loop wearing a trench coat\n\nanyway back to my for loop',
+  },
 ];
 
 const STYLES = [

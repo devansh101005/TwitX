@@ -38,7 +38,12 @@ export async function setupTelegramWebhook(
 }
 
 export class TelegramAdapter {
-  async sendDrafts(chatId: string, drafts: DraftPost[], userId: string): Promise<void> {
+  async sendDrafts(
+    chatId: string,
+    drafts: DraftPost[],
+    userId: string,
+    sourceIds: string[] = [],
+  ): Promise<void> {
     const tg = getTelegramBot();
 
     await tg.sendMessage(chatId, '🔥 *Your daily content suggestions are ready*', {
@@ -52,6 +57,7 @@ export class TelegramAdapter {
           content: draft.content,
           type: draft.type,
           status: 'pending',
+          sourceIds,
         },
       });
 

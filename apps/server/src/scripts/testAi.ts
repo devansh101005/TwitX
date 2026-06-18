@@ -7,8 +7,8 @@ import { scoreAndFilter } from '../lib/relevanceScore';
 import { generateDrafts } from '../services/ai/groq';
 
 async function main() {
-  if (!process.env.GROQ_API_KEY) {
-    console.error('GROQ_API_KEY is not set in apps/server/.env');
+  if (!process.env.AI_API_KEY && !process.env.GROQ_API_KEY) {
+    console.error('Set AI_API_KEY (or GROQ_API_KEY) in apps/server/.env');
     process.exit(1);
   }
 
@@ -18,6 +18,10 @@ async function main() {
     userId: 'test-user',
     niches: ['AI', 'WebDev'],
     tone: process.argv[2] ?? 'opinionated',
+    voiceSamples: [
+      'honestly half of being a senior engineer is just knowing which error to ignore',
+      'we keep inventing new abstractions to avoid reading the docs of the old ones',
+    ],
     postingStyle: 'mixed',
     postsPerDay: 3,
     scheduleHours: [9, 19],

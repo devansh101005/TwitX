@@ -12,6 +12,7 @@ export interface UserPreference {
   postsPerDay: number;
   deliveryChannel: string;
   twitterTier: string;
+  voiceSamples?: string[];
 }
 
 export interface User {
@@ -51,6 +52,9 @@ export const api = {
     }),
 
   getUser: (userId: string) => request<User>(`/users/${userId}`),
+
+  getPreferences: (userId: string) =>
+    request<UserPreference>(`/preferences/${userId}`),
 
   savePreferences: (userId: string, prefs: UserPreference) =>
     request<UserPreference>(`/preferences/${userId}`, {

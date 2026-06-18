@@ -3,8 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Runtime queries — Supabase Transaction pooler (port 6543, IPv4).
+  url       = env("DATABASE_URL")
+  // Migrations / DDL — Supabase Session pooler (port 5432, IPv4).
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -25,7 +28,8 @@ model UserPreference {
   userId          String   @unique
   user            User     @relation(fields: [userId], references: [id])
   niches          String[] // ["AI", "WebDev", "DSA", "Startups", "Cybersecurity"]
-  tone            String // "educational" | "witty" | "motivational" | "meme" | "opinionated"
+  tone            String // "educational" | "witty" | "motivational" | "meme" | "opinionated" | "tpot"
+  voiceSamples    String[] @default([]) // user's own example tweets — anchors the voice
   postingStyle    String // "short" | "thread" | "mixed"
   postsPerDay     Int      @default(3)
   scheduleHours   Int[]    @default([9, 19])

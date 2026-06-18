@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { api, GeneratedPost, User } from '@/lib/api';
 
 const STATUS_TOKENS: Record<
@@ -172,6 +173,13 @@ export default function DashboardPage() {
             <span className="hidden sm:inline font-mono text-[10px] text-ink-3 truncate max-w-[200px]">
               {userId}
             </span>
+            <span className="hidden sm:inline h-3 w-px bg-line" />
+            <Link
+              href="/dashboard/preferences"
+              className="font-mono text-[11px] text-ink-3 hover:text-ink transition"
+            >
+              Settings
+            </Link>
             <span className="hidden sm:inline h-3 w-px bg-line" />
             <button
               onClick={handleSignOut}

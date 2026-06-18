@@ -2,11 +2,38 @@ import { prisma } from '../db/prisma';
 import { fetchRedditPosts } from './fetcher/reddit';
 import { fetchHackerNews } from './fetcher/hackernews';
 import { fetchGitHubTrending } from './fetcher/github';
-import { scoreAndFilter } from '../lib/relevanceScore';
+import { scoreAndFilter, type RawContent } from '../lib/relevanceScore';
 import { generateDrafts, type DraftPost } from './ai/groq';
 import { NotificationService } from './notification/NotificationService';
 
 const notify = new NotificationService();
+
+/**
+ * Store the filtered source items so we can later inspect what inspired a draft
+ * (and for future ML). Returns the new row IDs, best-effort — a DB hiccup here
+ * shouldn't abort draft generation.
+ */
+async function persistSourceContent(items: RawContent[]): Promise<string[]> {
+  if (items.length === 0) return [];
+  try {
+    const created = await prisma.sourceContent.createManyAndReturn({
+      data: items.map((i) => ({
+        source: i.source,
+        title: i.title,
+        content: i.content,
+        url: i.url,
+        score: i.score,
+        tags: i.tags,
+      })),
+      select: { id: true },
+    });
+    return created.map((c) => c.id);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[pipeline] persistSourceContent failed: ${msg}`);
+    return [];
+  }
+}
 
 export interface PipelineResult {
   userId: string;
@@ -48,13 +75,16 @@ export async function runPipelineForUser(
     where: { userId: user.id },
     orderBy: { createdAt: 'desc' },
     take: 20,
+    include: { post: true },
   });
 
   const drafts = await generateDrafts(user.preferences, filtered, recentFeedback);
 
   let delivered = false;
   if (options.deliver !== false && drafts.length > 0) {
-    await notify.send(userId, drafts);
+    // Only persist sources when we'll actually create posts to link them to.
+    const sourceIds = await persistSourceContent(filtered);
+    await notify.send(userId, drafts, sourceIds);
     delivered = true;
   }
 
