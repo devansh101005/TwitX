@@ -1,6 +1,6 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { prisma } from '../../db/prisma';
-import type { DraftPost } from '../ai/groq';
+import type { GeneratedPost } from '@prisma/client';
 
 let bot: TelegramBot | null = null;
 
@@ -38,32 +38,17 @@ export async function setupTelegramWebhook(
 }
 
 export class TelegramAdapter {
-  async sendDrafts(
-    chatId: string,
-    drafts: DraftPost[],
-    userId: string,
-    sourceIds: string[] = [],
-  ): Promise<void> {
+  async sendDrafts(chatId: string, posts: GeneratedPost[]): Promise<void> {
     const tg = getTelegramBot();
 
-    await tg.sendMessage(chatId, '🔥 *Your daily content suggestions are ready*', {
+    await tg.sendMessage(chatId, ' *Your daily content suggestions are ready*', {
       parse_mode: 'Markdown',
     });
 
-    for (const draft of drafts) {
-      const post = await prisma.generatedPost.create({
-        data: {
-          userId,
-          content: draft.content,
-          type: draft.type,
-          status: 'pending',
-          sourceIds,
-        },
-      });
-
-      const label = draft.type === 'thread' ? '🧵 Thread' : '💬 Tweet';
-      const preview = draft.content.slice(0, 3500);
-      const message = `${label}\n\n${preview}${draft.content.length > 3500 ? '\n\n...(truncated)' : ''}`;
+    for (const post of posts) {
+      const label = post.type === 'thread' ? '🧵 Thread' : '💬 Tweet';
+      const preview = post.content.slice(0, 3500);
+      const message = `${label}\n\n${preview}${post.content.length > 3500 ? '\n\n...(truncated)' : ''}`;
 
       await tg.sendMessage(chatId, message, {
         reply_markup: {

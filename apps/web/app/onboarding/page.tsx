@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { api, TELEGRAM_BOT_USERNAME } from '@/lib/api';
+import { TELEGRAM_BOT_USERNAME } from '@/lib/api';
+import { useApi } from '@/lib/useApi';
 
 const NICHES = [
   { id: 'AI', label: 'AI / ML' },
@@ -65,17 +66,24 @@ const STYLES = [
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const api = useApi();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(() =>
-    typeof window !== 'undefined' ? localStorage.getItem('userId') : null,
-  );
+  const [userId, setUserId] = useState<string | null>(null);
 
   const [niches, setNiches] = useState<string[]>([]);
   const [tone, setTone] = useState('educational');
   const [postingStyle, setPostingStyle] = useState('mixed');
   const [postsPerDay, setPostsPerDay] = useState(3);
+
+  // Fetch (and auto-provision) the app user. Its id builds the Telegram link.
+  useEffect(() => {
+    api
+      .getMe()
+      .then((me) => setUserId(me?.id ?? null))
+      .catch(() => {});
+  }, [api]);
 
   const toggleNiche = (n: string) => {
     setNiches((prev) =>
@@ -94,14 +102,7 @@ export default function OnboardingPage() {
     }
     setSubmitting(true);
     try {
-      let id = userId;
-      if (!id) {
-        const user = await api.createUser();
-        id = user.id;
-        localStorage.setItem('userId', id);
-        setUserId(id);
-      }
-      await api.savePreferences(id, {
+      await api.savePreferences({
         niches,
         tone,
         postingStyle,

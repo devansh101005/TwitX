@@ -32,10 +32,20 @@ export interface GeneratedPost {
   generatedAt: string;
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+type Token = string | null;
+
+async function request<T>(
+  path: string,
+  token: Token,
+  init?: RequestInit,
+): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...init?.headers,
+    },
   });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
@@ -44,26 +54,35 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export const api = {
-  createUser: (name?: string) =>
-    request<User>('/users', {
-      method: 'POST',
-      body: JSON.stringify({ name }),
-    }),
+// Each function takes the Clerk session token. Prefer the useApi() hook, which
+// injects the token automatically.
+export const getMe = (token: Token) => request<User>('/me', token);
 
-  getUser: (userId: string) => request<User>(`/users/${userId}`),
+export const getPreferences = (token: Token) =>
+  request<UserPreference>('/preferences', token);
 
-  getPreferences: (userId: string) =>
-    request<UserPreference>(`/preferences/${userId}`),
+export const savePreferences = (token: Token, prefs: UserPreference) =>
+  request<UserPreference>('/preferences', token, {
+    method: 'POST',
+    body: JSON.stringify(prefs),
+  });
 
-  savePreferences: (userId: string, prefs: UserPreference) =>
-    request<UserPreference>(`/preferences/${userId}`, {
-      method: 'POST',
-      body: JSON.stringify(prefs),
-    }),
+export const getPosts = (token: Token) =>
+  request<GeneratedPost[]>('/posts', token);
 
-  getPosts: (userId: string) => request<GeneratedPost[]>(`/posts/${userId}`),
+export const triggerNow = (token: Token) =>
+  request<unknown>('/posts/trigger', token, { method: 'POST' });
 
-  triggerNow: (userId: string) =>
-    request<unknown>(`/posts/trigger/${userId}`, { method: 'POST' }),
-};
+export const regenerate = (token: Token) =>
+  request<unknown>('/posts/regenerate', token, { method: 'POST' });
+
+export const sendFeedback = (
+  token: Token,
+  postId: string,
+  feedbackType: 'liked' | 'skipped' | 'edited',
+  editedVersion?: string,
+) =>
+  request<unknown>('/feedback', token, {
+    method: 'POST',
+    body: JSON.stringify({ postId, feedbackType, editedVersion }),
+  });

@@ -23,6 +23,7 @@ async function ensureTestUser(): Promise<void> {
     update: {},
     create: {
       id: USER_ID,
+      clerkId: `clerk_${USER_ID}`,
       email: `${USER_ID}@local`,
       preferences: {
         create: {
@@ -85,9 +86,16 @@ async function main() {
   }
 
   console.log('Sending to Telegram...');
+  const posts = await Promise.all(
+    drafts.map((d) =>
+      prisma.generatedPost.create({
+        data: { userId: USER_ID, content: d.content, type: d.type, status: 'pending' },
+      }),
+    ),
+  );
   const notify = new NotificationService();
-  await notify.send(USER_ID, drafts);
-  console.log('  → sent ✓\n');
+  const delivered = await notify.send(USER_ID, posts);
+  console.log(`  → ${delivered ? 'sent ✓' : 'not delivered (saved only)'}\n`);
 
   console.log('Buttons (Approve/Skip/Edit) will only respond if the webhook is reachable');
   console.log('(local: ngrok + npm run webhook:setup, prod: Vercel + webhook:setup).');

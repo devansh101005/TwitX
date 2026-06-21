@@ -3,9 +3,10 @@ import { prisma } from '../db/prisma';
 
 const router = Router();
 
-router.get('/:userId', async (req, res) => {
+// GET /preferences — the authenticated user's preferences.
+router.get('/', async (req, res) => {
   const prefs = await prisma.userPreference.findUnique({
-    where: { userId: req.params.userId },
+    where: { userId: req.appUser!.id },
   });
   if (!prefs) {
     res.status(404).json({ error: 'preferences not set' });
@@ -14,7 +15,9 @@ router.get('/:userId', async (req, res) => {
   res.json(prefs);
 });
 
-router.post('/:userId', async (req, res) => {
+// POST /preferences — upsert the authenticated user's preferences.
+router.post('/', async (req, res) => {
+  const userId = req.appUser!.id;
   const { niches, tone, postingStyle, postsPerDay, deliveryChannel, twitterTier, voiceSamples } =
     req.body;
 
@@ -32,14 +35,8 @@ router.post('/:userId', async (req, res) => {
         .slice(0, 20)
     : undefined;
 
-  const user = await prisma.user.findUnique({ where: { id: req.params.userId } });
-  if (!user) {
-    res.status(404).json({ error: 'user not found' });
-    return;
-  }
-
   const prefs = await prisma.userPreference.upsert({
-    where: { userId: req.params.userId },
+    where: { userId },
     update: {
       niches,
       tone,
@@ -50,7 +47,7 @@ router.post('/:userId', async (req, res) => {
       ...(samples !== undefined ? { voiceSamples: samples } : {}),
     },
     create: {
-      userId: req.params.userId,
+      userId,
       niches,
       tone,
       postingStyle,

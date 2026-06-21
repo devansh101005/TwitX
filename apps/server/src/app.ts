@@ -1,8 +1,10 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import { clerkMiddleware, requireAuth } from '@clerk/express';
 import { prisma } from './db/prisma';
-import usersRouter from './routes/users';
+import { resolveAppUser } from './middleware/auth';
+import meRouter from './routes/me';
 import preferencesRouter from './routes/preferences';
 import postsRouter from './routes/posts';
 import feedbackRouter from './routes/feedback';
@@ -78,6 +80,10 @@ export function buildApp() {
   );
   app.use(express.json({ limit: '1mb' }));
 
+  // Populates auth context on every request (does not block). Machine routes
+  // below (/health, /cron, /telegram) simply ignore it.
+  app.use(clerkMiddleware());
+
   app.get('/health', async (_req: Request, res: Response) => {
     try {
       await prisma.user.count();
@@ -89,10 +95,12 @@ export function buildApp() {
     }
   });
 
-  app.use('/users', usersRouter);
-  app.use('/preferences', preferencesRouter);
-  app.use('/posts', postsRouter);
-  app.use('/feedback', feedbackRouter);
+  // Authenticated user routes: require a Clerk session, then resolve our User row.
+  const protect = [requireAuth(), resolveAppUser];
+  app.use('/me', ...protect, meRouter);
+  app.use('/preferences', ...protect, preferencesRouter);
+  app.use('/posts', ...protect, postsRouter);
+  app.use('/feedback', ...protect, feedbackRouter);
 
   // Telegram webhook — Telegram POSTs updates here.
   // Protected by the secret token we registered via setWebHook.

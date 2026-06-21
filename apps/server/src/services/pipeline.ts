@@ -82,10 +82,24 @@ export async function runPipelineForUser(
 
   let delivered = false;
   if (options.deliver !== false && drafts.length > 0) {
-    // Only persist sources when we'll actually create posts to link them to.
+    // Persist the drafts (and their sources) FIRST, so they always show up in
+    // the dashboard for review — even when no delivery channel is connected.
     const sourceIds = await persistSourceContent(filtered);
-    await notify.send(userId, drafts, sourceIds);
-    delivered = true;
+    const posts = await Promise.all(
+      drafts.map((d) =>
+        prisma.generatedPost.create({
+          data: {
+            userId,
+            content: d.content,
+            type: d.type,
+            status: 'pending',
+            sourceIds,
+          },
+        }),
+      ),
+    );
+    // Delivery is a separate, best-effort step; failure here doesn't lose drafts.
+    delivered = await notify.send(userId, posts);
   }
 
   return {

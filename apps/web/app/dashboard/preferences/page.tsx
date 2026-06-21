@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { api } from '@/lib/api';
+import { useApi } from '@/lib/useApi';
+import { AppHeader } from '@/components/AppHeader';
+import { Footer } from '@/components/Footer';
 
 const NICHES = [
   { id: 'AI', label: 'AI / ML' },
@@ -39,8 +39,7 @@ const CHANNELS = [
 ];
 
 export default function PreferencesPage() {
-  const router = useRouter();
-  const [userId, setUserId] = useState<string | null>(null);
+  const api = useApi();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,11 +53,11 @@ export default function PreferencesPage() {
   const [twitterTier, setTwitterTier] = useState('free');
   const [voiceText, setVoiceText] = useState('');
 
-  const load = useCallback(async (id: string) => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const prefs = await api.getPreferences(id);
+      const prefs = await api.getPreferences();
       setNiches(prefs.niches ?? []);
       setTone(prefs.tone ?? 'educational');
       setPostingStyle(prefs.postingStyle ?? 'mixed');
@@ -73,17 +72,11 @@ export default function PreferencesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [api]);
 
   useEffect(() => {
-    const id = localStorage.getItem('userId');
-    if (!id) {
-      router.replace('/onboarding');
-      return;
-    }
-    setUserId(id);
-    load(id);
-  }, [router, load]);
+    load();
+  }, [load]);
 
   const toggleNiche = (n: string) =>
     setNiches((prev) =>
@@ -91,7 +84,6 @@ export default function PreferencesPage() {
     );
 
   const handleSave = async () => {
-    if (!userId) return;
     setError(null);
     if (niches.length === 0) {
       setError('Pick at least one niche.');
@@ -104,7 +96,7 @@ export default function PreferencesPage() {
         .split('\n')
         .map((s) => s.trim())
         .filter(Boolean);
-      await api.savePreferences(userId, {
+      await api.savePreferences({
         niches,
         tone,
         postingStyle,
@@ -136,26 +128,9 @@ export default function PreferencesPage() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <nav className="border-b border-line">
-        <div className="flex items-center justify-between px-6 md:px-12 lg:px-16 h-14">
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-[13px] tracking-tight">
-              Copilot<span className="text-ink-4">/</span>
-            </span>
-            <span className="hidden md:inline font-mono text-[10px] text-ink-4 uppercase tracking-widest">
-              Preferences
-            </span>
-          </div>
-          <Link
-            href="/dashboard"
-            className="font-mono text-[11px] text-ink-3 hover:text-ink transition"
-          >
-            ← Dashboard
-          </Link>
-        </div>
-      </nav>
+      <AppHeader context="Settings" />
 
-      <main className="px-6 md:px-12 lg:px-16 py-12 lg:py-16 max-w-3xl w-full mx-auto">
+      <main className="flex-1 px-6 md:px-12 lg:px-16 py-12 lg:py-16 max-w-3xl w-full mx-auto">
         <header className="mb-12 reveal">
           <p className="eyebrow mb-3">Settings</p>
           <h1 className="text-[40px] md:text-[52px] leading-[0.95] tracking-[-0.035em] font-medium">
@@ -351,6 +326,7 @@ export default function PreferencesPage() {
           </button>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

@@ -19,6 +19,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@clerk/express": "^2.1.28",
     "@prisma/client": "^5.22.0",
     "axios": "^1.7.7",
     "cors": "^2.8.5",

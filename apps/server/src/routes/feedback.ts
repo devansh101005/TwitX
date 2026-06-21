@@ -10,16 +10,24 @@ const STATUS_BY_FEEDBACK: Record<string, string> = {
 };
 
 router.post('/', async (req, res) => {
-  const { userId, postId, feedbackType, editedVersion } = req.body;
+  const userId = req.appUser!.id;
+  const { postId, feedbackType, editedVersion } = req.body;
 
-  if (!userId || !postId || !feedbackType) {
-    res.status(400).json({ error: 'userId, postId, and feedbackType are required' });
+  if (!postId || !feedbackType) {
+    res.status(400).json({ error: 'postId and feedbackType are required' });
     return;
   }
 
   const status = STATUS_BY_FEEDBACK[feedbackType];
   if (!status) {
     res.status(400).json({ error: `invalid feedbackType: ${feedbackType}` });
+    return;
+  }
+
+  // Authorization: the post must belong to the authenticated user.
+  const post = await prisma.generatedPost.findUnique({ where: { id: postId } });
+  if (!post || post.userId !== userId) {
+    res.status(404).json({ error: 'post not found' });
     return;
   }
 
