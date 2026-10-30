@@ -46,39 +46,40 @@ export function DraftSpecimen() {
   }, []);
 
   return (
-    <div className="crosshair-4 border border-line bg-paper p-6 md:p-8 relative w-full max-w-md">
-      <span className="ch-tr" />
-      <span className="ch-bl" />
-
-      <div className="flex items-center justify-between mb-6">
+    <div className="card p-6 md:p-7 w-full max-w-md">
+      <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <span
-            className={`w-1.5 h-1.5 transition-colors duration-500 ${
-              done ? 'bg-status-approved' : 'bg-status-pending'
+            className={`w-2 h-2 rounded-full transition-colors duration-500 ${
+              done ? 'bg-signal' : 'bg-status-pending'
             }`}
             aria-hidden
           />
-          <span className="eyebrow">{done ? 'Draft · ready' : 'Drafting…'}</span>
+          <span className="text-[13px] font-medium text-ink-2">
+            {done ? 'Draft ready' : 'Drafting…'}
+          </span>
         </div>
-        <span className="font-mono text-[10px] text-ink-4">TONE/TPOT</span>
+        <span className="text-[11px] font-medium text-ink-4 bg-paper-2 px-2.5 py-1 rounded-full">
+          tone · tpot
+        </span>
       </div>
 
-      <pre className="whitespace-pre-wrap break-words font-sans text-[17px] leading-[1.55] text-ink tracking-[-0.005em] min-h-[5.5rem]">
+      <pre className="whitespace-pre-wrap break-words font-sans text-[17px] leading-[1.55] text-ink min-h-22">
         {typed}
         {!done && (
           <span
-            className="inline-block w-[2px] h-[1.1em] -mb-[0.15em] bg-ink ml-0.5"
+            className="inline-block w-0.5 h-[1.1em] mb-[-0.15em] bg-signal ml-0.5"
             style={{ animation: 'signal-pulse 1s steps(2) infinite' }}
             aria-hidden
           />
         )}
       </pre>
 
-      <div className="mt-7 pt-4 border-t border-line flex items-center justify-between font-mono text-[10px] text-ink-4">
+      <div className="mt-6 pt-4 border-t border-line flex items-center justify-between text-[12px] text-ink-4">
         <span>
           <span data-num>{typed.length}</span> chars
         </span>
-        <span>inspired-by: HN · github trending</span>
+        <span>from HN · GitHub trending</span>
       </div>
     </div>
   );

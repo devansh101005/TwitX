@@ -6,31 +6,33 @@ import { UserButton } from '@clerk/nextjs';
 
 const NAV = [
   { href: '/dashboard', label: 'Drafts' },
+  { href: '/dashboard/channels', label: 'Channels' },
   { href: '/dashboard/preferences', label: 'Settings' },
 ];
 
-/**
- * Shared top nav for authenticated pages. Replaces the three hand-rolled navs
- * that used to live inside dashboard / preferences / onboarding.
- */
+/** Shared top nav for authenticated pages. */
 export function AppHeader({ context }: { context?: string }) {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky top-0 z-30 border-b border-line bg-paper/85 backdrop-blur-sm">
-      <div className="flex items-center justify-between px-6 md:px-12 lg:px-16 h-14">
+    <nav className="sticky top-0 z-30 border-b border-line bg-paper/80 backdrop-blur-md">
+      <div className="flex items-center justify-between px-6 md:px-12 lg:px-16 h-16">
         <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="font-mono text-[13px] tracking-tight">
-            Copilot<span className="text-ink-4">/</span>
+          <Link
+            href="/dashboard"
+            className="font-display text-[18px] font-bold tracking-tight flex items-center gap-1.5"
+          >
+            Copilot
+            <span className="w-1.5 h-1.5 rounded-full bg-signal inline-block" />
           </Link>
           {context && (
-            <span className="hidden md:inline font-mono text-[10px] text-ink-4 uppercase tracking-widest">
-              {context}
+            <span className="hidden md:inline text-[13px] text-ink-4">
+              / {context}
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-1.5">
           {NAV.map((item) => {
             const active =
               item.href === '/dashboard'
@@ -40,15 +42,17 @@ export function AppHeader({ context }: { context?: string }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`font-mono text-[11px] transition ${
-                  active ? 'text-ink' : 'text-ink-3 hover:text-ink'
+                className={`text-[14px] px-3.5 py-2 rounded-btn transition ${
+                  active
+                    ? 'text-ink bg-paper-2'
+                    : 'text-ink-3 hover:text-ink hover:bg-paper-2'
                 }`}
               >
                 {item.label}
               </Link>
             );
           })}
-          <span className="hidden sm:inline h-3 w-px bg-line" />
+          <span className="hidden sm:inline w-px h-5 bg-line mx-2" />
           <UserButton />
         </div>
       </div>

@@ -15,6 +15,7 @@ export function useApi() {
   return useMemo(
     () => ({
       getMe: async () => api.getMe(await getToken()),
+      disconnectTelegram: async () => api.disconnectTelegram(await getToken()),
       getPreferences: async () => api.getPreferences(await getToken()),
       savePreferences: async (prefs: UserPreference) =>
         api.savePreferences(await getToken(), prefs),

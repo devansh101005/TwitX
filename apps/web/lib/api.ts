@@ -58,6 +58,11 @@ async function request<T>(
 // injects the token automatically.
 export const getMe = (token: Token) => request<User>('/me', token);
 
+export const disconnectTelegram = (token: Token) =>
+  request<{ ok: boolean }>('/me/telegram/disconnect', token, {
+    method: 'POST',
+  });
+
 export const getPreferences = (token: Token) =>
   request<UserPreference>('/preferences', token);
 

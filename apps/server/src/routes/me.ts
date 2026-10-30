@@ -13,4 +13,14 @@ router.get('/', async (req, res) => {
   res.json(user);
 });
 
+// POST /me/telegram/disconnect — unbind this user's Telegram chat.
+// (Binding happens out-of-band via the bot's /start link.)
+router.post('/telegram/disconnect', async (req, res) => {
+  await prisma.user.update({
+    where: { id: req.appUser!.id },
+    data: { telegramChatId: null },
+  });
+  res.json({ ok: true });
+});
+
 export default router;
